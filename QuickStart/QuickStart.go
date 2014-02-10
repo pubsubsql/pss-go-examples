@@ -44,6 +44,8 @@ func main() {
 	//----------------------------------------------------------------------------------------------------
 			
 	subscriber.Execute("subscribe * from Stocks where MarketCap = 'MEGA CAP'")
+	pubsubid := subscriber.PubSubId()
+	fmt.Println("subscribed to Stocks pubsubid:", pubsubid)
 	checkError(subscriber, "subscribe failed")
 
 	//----------------------------------------------------------------------------------------------------
@@ -54,12 +56,26 @@ func main() {
 	// data contains special characters: whitespace, single quote or comma 
 	client.Execute("insert into Stocks (Ticker, Price, MarketCap) values (GOOG, '1,200.22', 'MEGA CAP')")
 	checkError(client, "insert GOOG failed")
+	client.Execute("insert into Stocks (Ticker, Price, MarketCap) values (MSFT, 38,'MEGA CAP')")
+	checkError(client, "insert MSFT failed")
 
+	//----------------------------------------------------------------------------------------------------
+	// SELECT 
+	//----------------------------------------------------------------------------------------------------
+
+	client.Execute("select id, Ticker from Stocks") 
+	checkError(client, "select failed")
+	for client.NextRow() {
+		fmt.Println("*********************************")
+		fmt.Printf("id:%s Ticker:%s \n", client.Value("id"), client.Value("Ticker"))
+	}
+	checkError(client, "NextRow failed")
+	
 	//----------------------------------------------------------------------------------------------------
 	// PROCESS PUBLISHED INSERT
 	//----------------------------------------------------------------------------------------------------
 
-	timeout := 1000 
+	timeout := 100 
 	for subscriber.WaitForPubSub(timeout) {
 		fmt.Println("*********************************")
 		fmt.Println("Action:", subscriber.Action())		
@@ -79,7 +95,7 @@ func main() {
 	checkError(client, "update GOOG failed")
 
 	//----------------------------------------------------------------------------------------------------
-	// DO NOT PUBLISH INSERT
+	// DOES NOT PUBLISH INSERT
 	// we only subscribed to 'MEGA CAP'
 	//----------------------------------------------------------------------------------------------------
 
@@ -124,6 +140,12 @@ func main() {
 	}	
 	checkError(subscriber, "NextRow failed")
 
+	//----------------------------------------------------------------------------------------------------
+	// UNSUBSCRIBE 
+	//----------------------------------------------------------------------------------------------------
+
+	subscriber.Execute("unsubscribe from Stocks")
+	checkError(subscriber, "NextRow failed")
 	
 	//----------------------------------------------------------------------------------------------------
 	// DISCONNECT 
