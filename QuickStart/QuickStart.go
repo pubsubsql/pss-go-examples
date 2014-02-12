@@ -138,7 +138,7 @@ func main() {
 		}	
 		checkError(subscriber, "NextRow failed")
 	}	
-	checkError(subscriber, "NextRow failed")
+	checkError(subscriber, "WaitForPubSub failed")
 
 	//----------------------------------------------------------------------------------------------------
 	// UNSUBSCRIBE 
