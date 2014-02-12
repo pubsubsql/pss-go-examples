@@ -38,10 +38,10 @@ func main() {
 	//    key (unique index)      - key table_name column_name
 	//    tag (non-unique index)  - tag table_name column_name
 	//
-	// Tables and columns are auto created when accessed.
+	// Tables and columns are auto-created when accessed.
 	//
 	// The underlying data type for all columns is string.
-	// The strings do not have to be enclosed in single quotes as long as they have no special characters.
+	// Strings do not have to be enclosed in single quotes as long as they have no special characters.
 	// The special characters are
 	//    , - comma
 	//      - white space characters (space, tab, new line)
@@ -168,4 +168,3 @@ func main() {
 	client.Disconnect()
 	subscriber.Disconnect()
 }
-
