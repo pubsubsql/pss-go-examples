@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"github.com/pubsubsql/client"
 )
 
@@ -10,6 +11,7 @@ import (
 func checkError(client *pubsubsql.Client, str string) {
 	if client.Failed() {
 		fmt.Println("Error:", client.Error(), str)
+		os.Exit(1)
 	}
 }
 
