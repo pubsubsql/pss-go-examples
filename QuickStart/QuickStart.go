@@ -2,17 +2,17 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"github.com/pubsubsql/client"
 )
 
 /* MAKE SURE TO RUN PUBSUBSQL SERVER WHEN RUNNING THE EXAMPLE */
 
-func checkError(client *pubsubsql.Client, str string) {
-	if client.Failed() {
-		fmt.Println("Error:", client.Error(), str)
-		os.Exit(1)
+func checkError(err error) bool {
+	if err != nil {
+		fmt.Println("Error:", err.Error())
+		return true
 	}
+	return false
 }
 
 func main() {
@@ -24,10 +24,14 @@ func main() {
 	//----------------------------------------------------------------------------------------------------
 
 	address := "localhost:7777"
-	client.Connect(address)
-	checkError(client, "client connect failed")
-	subscriber.Connect(address)
-	checkError(client, "subscriber connect failed")
+	err := client.Connect(address)
+	if checkError(err) {
+		return
+	}
+	err = subscriber.Connect(address)
+	if checkError(err) {
+		return
+	}
 
 	//----------------------------------------------------------------------------------------------------
 	// SQL MUST-KNOW RULES
@@ -62,106 +66,118 @@ func main() {
 	// SUBSCRIBE
 	//----------------------------------------------------------------------------------------------------
 
-	subscriber.Execute("subscribe * from Stocks where MarketCap = 'MEGA CAP'")
+	err = subscriber.Execute("subscribe * from Stocks where MarketCap = 'MEGA CAP'")
+	checkError(err)
 	pubsubid := subscriber.PubSubId()
 	fmt.Println("subscribed to Stocks pubsubid:", pubsubid)
-	checkError(subscriber, "subscribe failed")
 
 	//----------------------------------------------------------------------------------------------------
 	// PUBLISH INSERT
 	//----------------------------------------------------------------------------------------------------
 
-	client.Execute("insert into Stocks (Ticker, Price, MarketCap) values (GOOG, '1,200.22', 'MEGA CAP')")
-	checkError(client, "insert GOOG failed")
-	client.Execute("insert into Stocks (Ticker, Price, MarketCap) values (MSFT, 38,'MEGA CAP')")
-	checkError(client, "insert MSFT failed")
+	err = client.Execute("insert into Stocks (Ticker, Price, MarketCap) values (GOOG, '1,200.22', 'MEGA CAP')")
+	checkError(err)
+	err = client.Execute("insert into Stocks (Ticker, Price, MarketCap) values (MSFT, 38,'MEGA CAP')")
+	checkError(err)
 
 	//----------------------------------------------------------------------------------------------------
 	// SELECT
 	//----------------------------------------------------------------------------------------------------
 
-	client.Execute("select id, Ticker from Stocks")
-	checkError(client, "select failed")
-	for client.NextRow() {
+	err = client.Execute("select id, Ticker from Stocks")
+	checkError(err)
+
+	for res := true; res; res, err = client.NextRow() {
+		checkError(err)
 		fmt.Println("*********************************")
 		fmt.Printf("id:%s Ticker:%s \n", client.Value("id"), client.Value("Ticker"))
 	}
-	checkError(client, "NextRow failed")
 
 	//----------------------------------------------------------------------------------------------------
 	// PROCESS PUBLISHED INSERT
 	//----------------------------------------------------------------------------------------------------
 
 	timeout := 100
-	for subscriber.WaitForPubSub(timeout) {
-		fmt.Println("*********************************")
-		fmt.Println("Action:", subscriber.Action())
-		for subscriber.NextRow() {
-			fmt.Println("New MEGA CAP stock:", subscriber.Value("Ticker"))
-			fmt.Println("Price:", subscriber.Value("Price"))
+	err = subscriber.WaitForPubSub(timeout)
+
+	fmt.Println("*********************************")
+	fmt.Println("Action:", subscriber.Action())
+
+	for {
+		more, err := subscriber.NextRow()
+		if checkError(err) {
+			break
 		}
-		checkError(subscriber, "NextRow failed")
+		fmt.Println("SUBSCRIBER New MEGA CAP stock:", subscriber.Value("Ticker"))
+		fmt.Println("SUBSCRIBER Price:", subscriber.Value("Price"))
+		if !more {
+			break
+		}
 	}
-	checkError(subscriber, "WaitForPubSub failed")
 
 	//----------------------------------------------------------------------------------------------------
 	// PUBLISH UPDATE
 	//----------------------------------------------------------------------------------------------------
 
 	client.Execute("update Stocks set Price = '1,500.00' where Ticker = GOOG")
-	checkError(client, "update GOOG failed")
 
 	//----------------------------------------------------------------------------------------------------
 	// SERVER WILL NOT PUBLISH INSERT BECAUSE WE ONLY SUBSCRIBED TO 'MEGA CAP'
 	//----------------------------------------------------------------------------------------------------
 
 	client.Execute("insert into Stocks (Ticker, Price, MarketCap) values (IBM, 168, 'LARGE CAP')")
-	checkError(client, "insert IBM failed")
 
 	//----------------------------------------------------------------------------------------------------
 	// PUBLISH ADD
 	//----------------------------------------------------------------------------------------------------
 
 	client.Execute("update Stocks set Price = 230.45, MarketCap = 'MEGA CAP' where Ticker = IBM")
-	checkError(client, "update IBM to MEGA CAP failed")
 
 	//----------------------------------------------------------------------------------------------------
 	// PUBLISH REMOVE
 	//----------------------------------------------------------------------------------------------------
 
 	client.Execute("update Stocks set Price = 170, MarketCap = 'LARGE CAP' where Ticker = IBM")
-	checkError(client, "update IBM to LARGE CAP failed")
 
 	//----------------------------------------------------------------------------------------------------
 	// PUBLISH DELETE
 	//----------------------------------------------------------------------------------------------------
 
 	client.Execute("delete from Stocks")
-	checkError(client, "delete failed")
 
 	//----------------------------------------------------------------------------------------------------
 	// PROCESS ALL PUBLISHED
 	//----------------------------------------------------------------------------------------------------
 
-	for subscriber.WaitForPubSub(timeout) {
+	for {
+		err := subscriber.WaitForPubSub(timeout)
+		if checkError(err) {
+			break
+		}
+
 		fmt.Println("*********************************")
 		fmt.Println("Action:", subscriber.Action())
-		for subscriber.NextRow() {
+		for {
+			more, err := subscriber.NextRow()
+			if checkError(err) {
+				break
+			}
 			for ordinal, column := range subscriber.Columns() {
 				fmt.Printf("%s:%s ", column, subscriber.ValueByOrdinal(ordinal))
 			}
 			fmt.Println("")
+			if !more {
+				break
+			}
 		}
-		checkError(subscriber, "NextRow failed")
 	}
-	checkError(subscriber, "WaitForPubSub failed")
 
 	//----------------------------------------------------------------------------------------------------
 	// UNSUBSCRIBE
 	//----------------------------------------------------------------------------------------------------
 
-	subscriber.Execute("unsubscribe from Stocks")
-	checkError(subscriber, "NextRow failed")
+	err = subscriber.Execute("unsubscribe from Stocks")
+	checkError(err)
 
 	//----------------------------------------------------------------------------------------------------
 	// DISCONNECT
