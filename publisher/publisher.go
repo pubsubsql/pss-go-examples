@@ -19,9 +19,9 @@ func main() {
 	address := "public.pubsubsql.com:7777"
 	publisher.Connect(address)
 
-	CheckError(publisher.Execute("key Stocks Ticker"))
-	CheckError(publisher.Execute("tag Stocks MarketCap"))
-	CheckError(publisher.Execute("insert into Stocks (Ticker, Price, MarketCap) values (GOOG, '1,2002d.22', 'MEGA CAP')"))
+	publisher.Execute("key Stocks Ticker")
+	publisher.Execute("tag Stocks MarketCap")
+	publisher.Execute("insert into Stocks (Ticker, Price, MarketCap) values (GOOG, '1,2002d.22', 'MEGA CAP')")
 
 	for {
 		time.Sleep(300 * time.Millisecond)
